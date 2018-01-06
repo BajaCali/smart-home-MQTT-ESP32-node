@@ -1,0 +1,6 @@
+{
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\admin\\.platformio\\penv\\Scripts;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\Bin;C:\\Program Files (x86)\\IQRF IDE4;C:\\Program Files\\PuTTY\\;C:\\Program Files\\Git\\cmd;C:\\Users\\admin\\AppData\\Local\\Programs\\Python\\Python36\\Scripts\\;C:\\Users\\admin\\AppData\\Local\\Programs\\Python\\Python36\\;C:\\Users\\admin\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\Microsoft VS Code\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\IVI Foundation\\VISA\\WinNT\\Bin;C:\\Program Files (x86)\\IQRF IDE4;C:\\Program Files\\PuTTY\\;C:\\Program Files\\Git\\cmd;C:\\Users\\admin\\AppData\\Local\\Programs\\Python\\Python36\\Scripts\\;C:\\Users\\admin\\AppData\\Local\\Programs\\Python\\Python36\\;C:\\Users\\admin\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\Microsoft VS Code\\bin"
+    },
+    "C_Cpp.intelliSenseEngineFallback": "Disabled"
+}
