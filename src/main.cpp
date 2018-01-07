@@ -127,13 +127,14 @@ void WiFi_setup(){
 	//digitalWrite(CONNECTED_LED, 1);
 	printf("\nStatus po whilu: %d",stat);
 	Serial.print("\nConnected!\nIP address: ");
-	Serial.print(WiFi.localIP());
+	Serial.println(WiFi.localIP());
 }
 
 void mqtt_connect() {
+    Serial.print("mqtt_connect");
     /* Loop until reconnected */
     while (!client.connected()) {
-        Serial.print("MQTT connecting ...");
+        Serial.print("MQTT connecting ... ");
         /* client ID */
         String clientId = THIS_ESP_NAME;
         /* connect now */
@@ -172,11 +173,14 @@ void lights_switches_setup() {
 }
 
 void change_light(int pin, int operation){ // operation: 0=off, 1=on, 2=change
+    Serial.print("pin ");
+    Serial.print(to_string(pin).c_str());
+    Serial.print(' ');
     switch(operation) {
         case 0:
-                digitalWrite(pin, LOW);
-                Serial.println("off");
-                break;
+            digitalWrite(pin, LOW);
+            Serial.println("off");
+            break;
         case 1:
             digitalWrite(pin, HIGH);
             Serial.println("on");
@@ -200,13 +204,15 @@ void change_light(int pin, int operation){ // operation: 0=off, 1=on, 2=change
 
 void callback(char* topic, byte* payload, unsigned int length) {
     // anoucment about intopic to serial
-    Serial.print("Message arrived [");
+    Serial.print("Message arrived! [");
     Serial.print(topic);
-    Serial.print("] ");
+    Serial.print("] payload:  \"");
+    std::string s_payload = "";
     for (int i = 0; i < length; i++) {
-        Serial.print((char)payload[i]);
+        s_payload += (char)payload[i];
     }
-    Serial.println();
+    Serial.print(s_payload.c_str());
+    Serial.println('\"');
     
     // create std:string this_board_topic, eg. light01
     std::string topic_string(topic);
@@ -220,7 +226,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if(index_of_topic != std::string::npos) {
         std::string s_light_num = this_board_topic.substr(5);
         int i_light_num = atoi(s_light_num.c_str());
-        change_light(lights[i_light_num], payload[0]);
+        change_light(lights[i_light_num]-1, atoi(s_payload.c_str()));
     }
 
     /*  
@@ -237,12 +243,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
   
 void switches(int number_of_switch) {
-	if((millis() - time_highs[number_of_switch]) > minDifTime){
+    Serial.print("\nGetting into switches. number_of_switch: ");
+    Serial.print(to_string(number_of_switch).c_str());
+	Serial.print("\nactual time_high: ");
+    Serial.print(to_string(time_highs[number_of_switch]).c_str());
+
+    long now = millis();
+    if((now - time_highs[number_of_switch]) > minDifTime){
         // creates topic with the right string of topic based on number_of_switch
         std::string topic = std::string(SWITCH01_TOPIC).substr(0,std::string(SWITCH01_TOPIC).length()-1-1);
         topic.append(to_string(number_of_switch+1));
 
-		client.publish(topic.c_str(), "2");  
+        Serial.print("\nTrying to publish [");
+        Serial.print(topic.c_str());
+        Serial.print("] payload: \"");
+        Serial.print("2");
+        Serial.print("\"");
+
+		client.publish("topic.c_str()", "2");
 	}
-	time_highs[number_of_switch] = millis();
+	time_highs[number_of_switch] = now;
 }
