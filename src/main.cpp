@@ -13,6 +13,7 @@
 #include <PubSubClient.h>
 #include <string>
 #include <sstream>
+
 template <typename T>
 std::string to_string(T value) { //converts number to string
     //create an output string stream
@@ -54,6 +55,7 @@ const char switch01 = pins_of_switches[0];
 const char switch02 = pins_of_switches[1];
 const char switch03 = pins_of_switches[2];
 const char switch04 = pins_of_switches[3];
+int state_of_switches[NUM_OF_SWITCHES];
 
 // vars for correctly working switches
 volatile unsigned long time_highs[NUM_OF_SWITCHES] = { 0 };
@@ -63,6 +65,8 @@ volatile unsigned long minDifTime = 100;
 int no_connection_switch_table[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 /* topics */
+#define NODES_TOPIC "nodes" // ESP is sending there messages about what is it sending
+
 #define LIGHT01_TOPIC     "home/floor1/myroom/bed_esp/light01" /* 0 = off, 1 = on, 2 = change */
 #define LIGHT02_TOPIC     "home/floor1/myroom/bed_esp/light02" /* 0 = off, 1 = on, 2 = change */
 #define LIGHT03_TOPIC     "home/floor1/myroom/bed_esp/light03" /* 0 = off, 1 = on, 2 = change */
@@ -78,7 +82,9 @@ void mqtt_connect(); //connects to MQTT broker
 void lights_switches_setup(); // setups via pinMode() for each light and switch, also sets interrupt for switches
 void change_light(int pin, int operation); // on/off/change state of a pin
 void callback(char* topic, byte* payload, unsigned int length); // is launched, when subscribed topic msg arrives, starts othr functions based on topic
-void switches(int number_of_switch);
+void switches(int number_of_switch); //is launched, when a swich is swiched, sends msg to broker about it
+void switches_loop();
+void mqtt_publish(const char* topic, const char* payload); // send mqtt msg and send it under "nodes" topic
 
 
 void setup() {
@@ -99,6 +105,7 @@ void loop() {
     /* this function will listen for incomming 
     subscribed topic-process-invoke callback() */
     client.loop();
+    switches_loop();
 }
 
 void WiFi_setup(){
@@ -141,7 +148,7 @@ void mqtt_connect() {
         if (client.connect(clientId.c_str())) {
             Serial.println("connected");
             // Once connected, publish an announcement...
-            client.publish("nodes", "Hi!");
+            mqtt_publish("nodes", "Hi!");
             /* subscribe topic with default QoS 0*/
             client.subscribe(LIGHT01_TOPIC);
             client.subscribe(LIGHT02_TOPIC);
@@ -151,9 +158,9 @@ void mqtt_connect() {
         else {
             Serial.print("failed, status code =");
             Serial.print(client.state());
-            Serial.println("try again in 2 seconds");
-            /* Wait 2 seconds before retrying */
-            delay(2000);
+            Serial.println("\nTrying again in 0.5 seconds..");
+            /* Wait 0.5 seconds before retrying */
+            delay(500);
         }
     }
 }
@@ -165,11 +172,12 @@ void lights_switches_setup() {
     // 
     for( int i = 0; i < NUM_OF_SWITCHES; i++) {
         pinMode(pins_of_switches[i], INPUT_PULLUP);
+        state_of_switches[i] = digitalRead(pins_of_switches[i]);
     }
-    attachInterrupt(digitalPinToInterrupt(pins_of_switches[0]), [](){switches(0);}, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(pins_of_switches[1]), [](){switches(1);}, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(pins_of_switches[2]), [](){switches(2);}, CHANGE);
-    attachInterrupt(digitalPinToInterrupt(pins_of_switches[3]), [](){switches(3);}, CHANGE);
+    // attachInterrupt(digitalPinToInterrupt(pins_of_switches[0]), [](){switches(0);}, CHANGE);
+    // attachInterrupt(digitalPinToInterrupt(pins_of_switches[1]), [](){switches(1);}, CHANGE);
+    // attachInterrupt(digitalPinToInterrupt(pins_of_switches[2]), [](){switches(2);}, CHANGE);
+    // attachInterrupt(digitalPinToInterrupt(pins_of_switches[3]), [](){switches(3);}, CHANGE);
 }
 
 void change_light(int pin, int operation){ // operation: 0=off, 1=on, 2=change
@@ -200,6 +208,7 @@ void change_light(int pin, int operation){ // operation: 0=off, 1=on, 2=change
             Serial.println(operation);
             break;
     }
+    mqtt_publish("nodes", "Light processed.");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -243,7 +252,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
   
 void switches(int number_of_switch) {
-    Serial.print("\nGetting into switches. number_of_switch: ");
+    Serial.print("\nGetting into switch: ");
     Serial.print(to_string(number_of_switch).c_str());
 	Serial.print("\nactual time_high: ");
     Serial.print(to_string(time_highs[number_of_switch]).c_str());
@@ -251,7 +260,7 @@ void switches(int number_of_switch) {
     long now = millis();
     if((now - time_highs[number_of_switch]) > minDifTime){
         // creates topic with the right string of topic based on number_of_switch
-        std::string topic = std::string(SWITCH01_TOPIC).substr(0,std::string(SWITCH01_TOPIC).length()-1-1);
+        std::string topic = std::string(SWITCH01_TOPIC).substr(0,std::string(SWITCH01_TOPIC).length()-1);
         topic.append(to_string(number_of_switch+1));
 
         Serial.print("\nTrying to publish [");
@@ -260,7 +269,36 @@ void switches(int number_of_switch) {
         Serial.print("2");
         Serial.print("\"");
 
-		client.publish("topic.c_str()", "2");
+        mqtt_publish(topic.c_str(), "2");
+		// client.publish("topic.c_str()", "2");
+
+        Serial.print("\nMessage sended! [");
+        Serial.print(topic.c_str());
+        Serial.print(" payload: \"");
+        Serial.print("2\"");
 	}
 	time_highs[number_of_switch] = now;
+    Serial.println("Done with a switch. ");
+}
+
+void switches_loop() {
+    for (int i = 0; i < NUM_OF_SWITCHES; i++) {
+        if (state_of_switches[i] != digitalRead(pins_of_switches[i])) {
+            state_of_switches[i] = digitalRead(pins_of_switches[i]);
+            switches(i);
+            // mqtt_publish(SWITCH01_TOPIC, "2");
+        }
+    }
+}
+
+void mqtt_publish(const char* topic, const char* payload) {
+    client.publish(topic, payload);
+    std::string topic_nodes = "PUB (";
+    topic_nodes.append(THIS_ESP_NAME.c_str());
+    topic_nodes.append(") [");
+    topic_nodes.append(topic);
+    topic_nodes.append("] payload: \"");
+    topic_nodes.append(payload);
+    topic_nodes.append("\" ");
+    client.publish(NODES_TOPIC, topic_nodes.c_str());
 }
