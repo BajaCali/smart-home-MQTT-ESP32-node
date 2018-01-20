@@ -30,7 +30,7 @@ std::string to_string(T value) { //converts number to string
 #include "credentials.h"
 
 // ip of MQTT broker
-const char* mqtt_server = "192.168.2.119";
+const char* mqtt_server = "192.168.2.115";
 
 const String THIS_ESP_NAME = "BedESP";
 
@@ -62,7 +62,7 @@ volatile unsigned long time_highs[NUM_OF_SWITCHES] = { 0 };
 volatile unsigned long minDifTime = 100;
 
 // table using while no connection, [number_of_switch][light(s), which wants to be changed]
-int no_connection_switch_table[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+int no_connection_switch_table[NUM_OF_SWITCHES][NUM_OF_LIGHTS];
 
 /* topics */
 #define NODES_TOPIC "nodes" // ESP is sending there messages about what is it sending
@@ -84,7 +84,8 @@ void change_light(int pin, int operation); // on/off/change state of a pin
 void callback(char* topic, byte* payload, unsigned int length); // is launched, when subscribed topic msg arrives, starts othr functions based on topic
 void switches(int number_of_switch); //is launched, when a swich is swiched, sends msg to broker about it
 void switches_loop();
-void mqtt_publish(const char* topic, const char* payload); // send mqtt msg and send it under "nodes" topic
+void mqtt_publish(const char* topic, const char* payload); // sends mqtt msg and also sends it under "nodes" topic
+void switches_loop_offline(); // change lights on switch changes, when ESP not connected to mqtt broker, operates with no_connection_switch_table[][], wich is inited in lights_switches_setup()
 
 
 void setup() {
@@ -158,14 +159,26 @@ void mqtt_connect() {
         else {
             Serial.print("failed, status code =");
             Serial.print(client.state());
-            Serial.println("\nTrying again in 0.5 seconds..");
-            /* Wait 0.5 seconds before retrying */
-            delay(500);
+            Serial.println("\nTrying again in 60 seconds..");
+            /* Wait 60 seconds before retrying */
+            double last_time = millis();
+            while (last_time + 60000 > millis())
+                switches_loop_offline();
         }
     }
 }
 
 void lights_switches_setup() {
+    // init no connection table
+    for (int i = 0; i < NUM_OF_SWITCHES; i++) {
+        for (int j = 0; j < NUM_OF_LIGHTS; j++) {
+            // printf("i: %d \tj: %d\n", i, j);
+            if (j == i)
+                no_connection_switch_table[i][j] = 1;
+            else
+                no_connection_switch_table[i][j] = 0;
+        }
+    }
     /* set led as output to control led on-off */
     for( int i = 0; i < NUM_OF_LIGHTS; i++)
         pinMode(lights[i], OUTPUT);;
@@ -301,4 +314,20 @@ void mqtt_publish(const char* topic, const char* payload) {
     topic_nodes.append(payload);
     topic_nodes.append("\" ");
     client.publish(NODES_TOPIC, topic_nodes.c_str());
+}
+
+void switches_loop_offline() {
+    for (int i = 0; i < NUM_OF_SWITCHES; i++) {
+        if (state_of_switches[i] != digitalRead(pins_of_switches[i])) {
+            state_of_switches[i] = digitalRead(pins_of_switches[i]);
+            
+            for (int j = 0; j < NUM_OF_LIGHTS; j ++){
+                printf("\ntable: sw: %d l: %d\t %d",i ,j ,no_connection_switch_table[i][j]);
+                if (no_connection_switch_table[i][j] == 1)
+                    change_light(lights[j], 2);
+            }
+
+            // mqtt_publish(SWITCH01_TOPIC, "2");
+        }
+    }
 }
