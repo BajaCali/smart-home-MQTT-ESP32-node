@@ -32,7 +32,7 @@ std::string to_string(T value) { //converts number to string
 // ip of MQTT broker
 const char* mqtt_server = "192.168.2.115";
 
-const String THIS_ESP_NAME = "BedESP";
+const std::string THIS_ESP_NAME = "BedESP";
 
 /* create an instance of PubSubClient client */
 WiFiClient espClient;
@@ -86,6 +86,7 @@ void switches(int number_of_switch); //is launched, when a swich is swiched, sen
 void switches_loop();
 void mqtt_publish(const char* topic, const char* payload); // sends mqtt msg and also sends it under "nodes" topic
 void switches_loop_offline(); // change lights on switch changes, when ESP not connected to mqtt broker, operates with no_connection_switch_table[][], wich is inited in lights_switches_setup()
+void send_lights_info(); // send 0/1 about lights to NODES_TOPIC; format of payload: "THIS_ESP_NAME lights: x y z" x,y,z - 0/1 of state of 1., 2., ... light
 
 
 void setup() {
@@ -144,9 +145,8 @@ void mqtt_connect() {
     while (!client.connected()) {
         Serial.print("MQTT connecting ... ");
         /* client ID */
-        String clientId = THIS_ESP_NAME;
         /* connect now */
-        if (client.connect(clientId.c_str())) {
+        if (client.connect(THIS_ESP_NAME.c_str())) {
             Serial.println("connected");
             // Once connected, publish an announcement...
             mqtt_publish("nodes", "Hi!");
@@ -221,6 +221,7 @@ void change_light(int pin, int operation){ // operation: 0=off, 1=on, 2=change
             Serial.println(operation);
             break;
     }
+    send_lights_info();
     mqtt_publish("nodes", "Light processed.");
 }
 
@@ -330,4 +331,15 @@ void switches_loop_offline() {
             // mqtt_publish(SWITCH01_TOPIC, "2");
         }
     }
+}
+
+void send_lights_info() {
+    std::string out = "";
+    out.append(THIS_ESP_NAME.c_str());
+    out += " lights:";
+    for (int i = 0; i < NUM_OF_LIGHTS; i++) {
+        out += " ";
+        out += to_string(digitalRead(lights[i]));
+    }
+    mqtt_publish(NODES_TOPIC, out.c_str());
 }
