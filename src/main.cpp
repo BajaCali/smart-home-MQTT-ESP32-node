@@ -30,9 +30,9 @@ std::string to_string(T value) { //converts number to string
 #include "credentials.h"
 
 // ip of MQTT broker
-const char* mqtt_server = "192.168.2.115";
+const char* mqtt_server = "192.168.2.117";
 
-const std::string THIS_ESP_NAME = "BedESP";
+const std::string THIS_ESP_NAME = "second_esp";
 
 /* create an instance of PubSubClient client */
 WiFiClient espClient;
@@ -67,15 +67,15 @@ int no_connection_switch_table[NUM_OF_SWITCHES][NUM_OF_LIGHTS];
 /* topics */
 #define NODES_TOPIC "nodes" // ESP is sending there messages about what is it sending
 
-#define LIGHT01_TOPIC     "home/floor1/myroom/bed_esp/light01" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT02_TOPIC     "home/floor1/myroom/bed_esp/light02" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT03_TOPIC     "home/floor1/myroom/bed_esp/light03" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT04_TOPIC     "home/floor1/myroom/bed_esp/light04" /* 0 = off, 1 = on, 2 = change */
+#define LIGHT01_TOPIC     "home/floor1/myroom/second_esp/light01" /* 0 = off, 1 = on, 2 = change */
+#define LIGHT02_TOPIC     "home/floor1/myroom/second_esp/light02" /* 0 = off, 1 = on, 2 = change */
+#define LIGHT03_TOPIC     "home/floor1/myroom/second_esp/light03" /* 0 = off, 1 = on, 2 = change */
+#define LIGHT04_TOPIC     "home/floor1/myroom/second_esp/light04" /* 0 = off, 1 = on, 2 = change */
 
-#define SWITCH01_TOPIC     "home/floor1/myroom/bed_esp/switch01" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH02_TOPIC     "home/floor1/myroom/bed_esp/switch02" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH03_TOPIC     "home/floor1/myroom/bed_esp/switch03" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH04_TOPIC     "home/floor1/myroom/bed_esp/switch04" /* 0 = off, 1 = on, 2 = change */
+#define SWITCH01_TOPIC     "home/floor1/myroom/second_esp/switch01" /* 0 = off, 1 = on, 2 = change */
+#define SWITCH02_TOPIC     "home/floor1/myroom/second_esp/switch02" /* 0 = off, 1 = on, 2 = change */
+#define SWITCH03_TOPIC     "home/floor1/myroom/second_esp/switch03" /* 0 = off, 1 = on, 2 = change */
+#define SWITCH04_TOPIC     "home/floor1/myroom/second_esp/switch04" /* 0 = off, 1 = on, 2 = change */
 
 void WiFi_setup(); //conects to WiFi from credentials.h
 void mqtt_connect(); //connects to MQTT broker 
@@ -84,7 +84,7 @@ void change_light(int pin, int operation); // on/off/change state of a pin
 void callback(char* topic, byte* payload, unsigned int length); // is launched, when subscribed topic msg arrives, starts othr functions based on topic
 void switches(int number_of_switch); //is launched, when a swich is swiched, sends msg to broker about it
 void switches_loop();
-void mqtt_publish(const char* topic, const char* payload); // sends mqtt msg and also sends it under "nodes" topic
+void mqtt_publish(const char* topic, const char* payload); // sends mqtt msg and also sends it under NODES_TOPIC topic
 void switches_loop_offline(); // change lights on switch changes, when ESP not connected to mqtt broker, operates with no_connection_switch_table[][], wich is inited in lights_switches_setup()
 void send_lights_info(); // send 0/1 about lights to NODES_TOPIC; format of payload: "THIS_ESP_NAME lights: x y z" x,y,z - 0/1 of state of 1., 2., ... light
 
@@ -239,12 +239,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
     
     // create std:string this_board_topic, eg. light01
     std::string topic_string(topic);
-    std::size_t index = topic_string.find("bed_esp");
-    std::string this_board_topic = topic_string.substr(index + 8);
+    std::size_t index = topic_string.find(THIS_ESP_NAME);
+    std::string this_board_topic = topic_string.substr(index + THIS_ESP_NAME.length() + 1);
     Serial.print("this board topic: ");
     Serial.println(this_board_topic.c_str());
 
-    // starts change_light(), when topic is light, with correct pin from topic
+    // starts change_light(), when topic is "light", with correct pin from topic
     std::size_t index_of_topic = this_board_topic.find("light");
     if(index_of_topic != std::string::npos) {
         std::string s_light_num = this_board_topic.substr(5);
