@@ -67,15 +67,16 @@ int no_connection_switch_table[NUM_OF_SWITCHES][NUM_OF_LIGHTS];
 /* topics */
 #define NODES_TOPIC "nodes" // ESP is sending there messages about what is it sending
 
-#define LIGHT01_TOPIC     "home/floor1/myroom/bed_esp/light01" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT02_TOPIC     "home/floor1/myroom/bed_esp/light02" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT03_TOPIC     "home/floor1/myroom/bed_esp/light03" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT04_TOPIC     "home/floor1/myroom/bed_esp/light04" /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT01_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light01"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT02_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light02"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT03_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light03"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT04_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light04"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHTS_TOPIC[] = { LIGHT01_TOPIC, LIGHT02_TOPIC, LIGHT03_TOPIC, LIGHT03_TOPIC };
 
-#define SWITCH01_TOPIC     "home/floor1/myroom/bed_esp/switch01" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH02_TOPIC     "home/floor1/myroom/bed_esp/switch02" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH03_TOPIC     "home/floor1/myroom/bed_esp/switch03" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH04_TOPIC     "home/floor1/myroom/bed_esp/switch04" /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH01_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch01"; /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH02_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch02"; /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH03_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch03"; /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH04_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch04"; /* 0 = off, 1 = on, 2 = change */
 
 void WiFi_setup(); //conects to WiFi from credentials.h
 void mqtt_connect(); //connects to MQTT broker 
@@ -151,10 +152,8 @@ void mqtt_connect() {
             // Once connected, publish an announcement...
             mqtt_publish("nodes", "Hi!");
             /* subscribe topic with default QoS 0*/
-            client.subscribe(LIGHT01_TOPIC);
-            client.subscribe(LIGHT02_TOPIC);
-            client.subscribe(LIGHT03_TOPIC);
-            client.subscribe(LIGHT04_TOPIC);
+            for (std::string topic: LIGHTS_TOPIC)
+                client.subscribe(topic.c_str());
         } 
         else {
             Serial.print("failed, status code =");
