@@ -41,7 +41,7 @@ PubSubClient client(espClient);
 //  lights GPIO pins
 //               01, 02, 03, 04
 #define NUM_OF_LIGHTS 4
-int lights[NUM_OF_LIGHTS] = {25, 26, 27, 33};
+int lights[NUM_OF_LIGHTS] = {23, 21, 4, 15};
 const char light01 = lights[0];
 const char light02 = lights[1];
 const char light03 = lights[2];
@@ -50,7 +50,7 @@ const char light04 = lights[3];
 // switches GPIO pins
 //                01, 02, 03, 04
 #define NUM_OF_SWITCHES 4
-int pins_of_switches[NUM_OF_SWITCHES] = {12, 14, 13, 15};
+int pins_of_switches[NUM_OF_SWITCHES] = {34, 35, 32, 13};
 const char switch01 = pins_of_switches[0];
 const char switch02 = pins_of_switches[1];
 const char switch03 = pins_of_switches[2];
@@ -67,15 +67,16 @@ int no_connection_switch_table[NUM_OF_SWITCHES][NUM_OF_LIGHTS];
 /* topics */
 #define NODES_TOPIC "nodes" // ESP is sending there messages about what is it sending
 
-#define LIGHT01_TOPIC     "home/floor1/myroom/bed_esp/light01" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT02_TOPIC     "home/floor1/myroom/bed_esp/light02" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT03_TOPIC     "home/floor1/myroom/bed_esp/light03" /* 0 = off, 1 = on, 2 = change */
-#define LIGHT04_TOPIC     "home/floor1/myroom/bed_esp/light04" /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT01_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light01"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT02_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light02"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT03_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light03"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHT04_TOPIC =  "home/floor1/myroom/" + THIS_ESP_NAME + "/light04"; /* 0 = off, 1 = on, 2 = change */
+const std::string LIGHTS_TOPIC[NUM_OF_LIGHTS] = { LIGHT01_TOPIC, LIGHT02_TOPIC, LIGHT03_TOPIC, LIGHT03_TOPIC };
 
-#define SWITCH01_TOPIC     "home/floor1/myroom/bed_esp/switch01" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH02_TOPIC     "home/floor1/myroom/bed_esp/switch02" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH03_TOPIC     "home/floor1/myroom/bed_esp/switch03" /* 0 = off, 1 = on, 2 = change */
-#define SWITCH04_TOPIC     "home/floor1/myroom/bed_esp/switch04" /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH01_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch01"; /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH02_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch02"; /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH03_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch03"; /* 0 = off, 1 = on, 2 = change */
+const std::string SWITCH04_TOPIC = "home/floor1/myroom/" + THIS_ESP_NAME + "/switch04"; /* 0 = off, 1 = on, 2 = change */
 
 void WiFi_setup(); //conects to WiFi from credentials.h
 void mqtt_connect(); //connects to MQTT broker 
@@ -123,6 +124,7 @@ void WiFi_setup(){
 		fflush(stdout);
 		//reset();
 	}
+    int timeout = 10;
 	while (stat != WL_CONNECTED) {
 		printf("\nStatus: %d",stat);
 		if (stat != WL_DISCONNECTED && stat != WL_CONNECTED){
@@ -132,6 +134,10 @@ void WiFi_setup(){
 		Serial.print(".");
 		delay(500);
 		stat = WiFi.status();
+        if (--timeout == 0) {
+            Serial.println("Connection timeout.");
+            return;
+        }
 	}
 	//digitalWrite(CONNECTED_LED, 1);
 	printf("\nStatus po whilu: %d",stat);
@@ -151,10 +157,8 @@ void mqtt_connect() {
             // Once connected, publish an announcement...
             mqtt_publish("nodes", "Hi!");
             /* subscribe topic with default QoS 0*/
-            client.subscribe(LIGHT01_TOPIC);
-            client.subscribe(LIGHT02_TOPIC);
-            client.subscribe(LIGHT03_TOPIC);
-            client.subscribe(LIGHT04_TOPIC);
+            for (std::string topic: LIGHTS_TOPIC)
+                client.subscribe(topic.c_str());
         } 
         else {
             Serial.print("failed, status code =");
